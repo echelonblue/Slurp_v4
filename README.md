@@ -15,6 +15,7 @@ Elke service draait in een eigen Docker Compose-stack en is individueel bereikba
 | Jellyfin   | Mediaserver              | 8096          | https://jellyfin.netbird.cloud   |
 | Bazarr     | Ondertitelbeheer         | 6767          | https://bazarr.netbird.cloud     |
 | Prowlarr   | Indexerbeheer            | 9696          | https://prowlarr.netbird.cloud   |
+| Shelfarr   | Boekenbeheer             | 80            | https://shelfarr.netbird.cloud   |
 | Lingarr    | Ondertitelvertaling (AI) | 80            | https://lingarr.netbird.cloud    |
 | Watchtower | Automatische updates     | —             | —                                |
 
@@ -57,6 +58,7 @@ Doordat alle containers het netwerk-namespace van de Netbird-container delen, is
 ├── docker-compose.jellyfin.yml
 ├── docker-compose.bazarr.yml
 ├── docker-compose.prowlarr.yml
+├── docker-compose.shelfarr.yml
 ├── docker-compose.lingarr.yml
 ├── docker-compose.watchtower.yml
 ├── caddy/
@@ -69,6 +71,7 @@ Doordat alle containers het netwerk-namespace van de Netbird-container delen, is
 │   ├── Caddyfile.jellyfin
 │   ├── Caddyfile.bazarr
 │   ├── Caddyfile.prowlarr
+│   ├── Caddyfile.shelfarr
 │   └── Caddyfile.lingarr
 ├── config/                           # Persistente configuratie per app
 │   ├── config_lidarr/
@@ -82,6 +85,7 @@ Doordat alle containers het netwerk-namespace van de Netbird-container delen, is
 │   ├── config_jellyfin_cache/
 │   ├── config_bazarr/
 │   ├── config_prowlarr/
+│   ├── config_shelfarr/
 │   ├── config_lingarr/
 │   ├── config_netbird_<service>/{etc,var}/
 │   └── config_caddy_<service>/{data,config}/
@@ -120,6 +124,7 @@ NB_SETUP_KEY_SPOTWEB=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_JELLYFIN=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_BAZARR=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_PROWLARR=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+NB_SETUP_KEY_SHELFARR=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_LINGARR=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 OLLAMA_HOST=1.2.3.4
@@ -131,9 +136,9 @@ SPOTWEB_DB_PASSWORD=kies-een-sterk-wachtwoord
 ### 4. Mappen aanmaken
 
 ```bash
-mkdir -p config/config_lidarr config/config_radarr/data config/config_sabznbd config/config_sonarr/data config/config_overseerr config/config_spotweb config/config_spotweb_db config/config_jellyfin config/config_jellyfin_cache config/config_bazarr config/config_prowlarr config/config_lingarr
-mkdir -p config/config_netbird_{lidarr,radarr,sabnzbd,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,lingarr}/{etc,var}
-mkdir -p config/config_caddy_{lidarr,radarr,sabnzbd,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,lingarr}/{data,config}
+mkdir -p config/config_lidarr config/config_radarr/data config/config_sabznbd config/config_sonarr/data config/config_overseerr config/config_spotweb config/config_spotweb_db config/config_jellyfin config/config_jellyfin_cache config/config_bazarr config/config_prowlarr config/config_shelfarr config/config_lingarr
+mkdir -p config/config_netbird_{lidarr,radarr,sabnzbd,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,shelfarr,lingarr}/{etc,var}
+mkdir -p config/config_caddy_{lidarr,radarr,sabnzbd,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,shelfarr,lingarr}/{data,config}
 mkdir -p downloads music movies tv tmp/tmp_sabnzbd
 ```
 

@@ -1,0 +1,42 @@
+---
+services:
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: netbird_shelfarr
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - NB_SETUP_KEY=${NB_SETUP_KEY_SHELFARR}
+      - NB_HOSTNAME=shelfarr
+    volumes:
+      - ./config/config_netbird_shelfarr/etc:/etc/netbird
+      - ./config/config_netbird_shelfarr/var:/var/lib/netbird
+    restart: unless-stopped
+
+  shelfarr:
+    image: ghcr.io/pedro-revez-silva/shelfarr:latest
+    container_name: shelfarr
+    network_mode: service:netbird
+    environment:
+      - TZ=Europe/Amsterdam
+    volumes:
+      - ./config/config_shelfarr:/config
+    depends_on:
+      - netbird
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:alpine
+    container_name: caddy_shelfarr
+    network_mode: service:netbird
+    volumes:
+      - ./caddy/Caddyfile.shelfarr:/etc/caddy/Caddyfile:ro
+      - ./config/config_caddy_shelfarr/data:/data
+      - ./config/config_caddy_shelfarr/config:/config
+    depends_on:
+      - netbird
+      - shelfarr
+    restart: unless-stopped
