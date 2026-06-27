@@ -1,0 +1,46 @@
+---
+services:
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: netbird_sabnzbd
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - NB_SETUP_KEY=${NB_SETUP_KEY_SABNZBD}
+      - NB_HOSTNAME=sabnzbd
+    volumes:
+      - ./config/config_netbird_sabnzbd/etc:/etc/netbird
+      - ./config/config_netbird_sabnzbd/var:/var/lib/netbird
+    restart: unless-stopped
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    network_mode: service:netbird
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Amsterdam
+    volumes:
+      - ./config/config_sabznbd:/config
+      - ./tmp/tmp_sabnzbd:/incomplete-downloads
+      - ./downloads:/downloads
+    depends_on:
+      - netbird
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:alpine
+    container_name: caddy_sabnzbd
+    network_mode: service:netbird
+    volumes:
+      - ./caddy/Caddyfile.sabnzbd:/etc/caddy/Caddyfile:ro
+      - ./config/config_caddy_sabnzbd/data:/data
+      - ./config/config_caddy_sabnzbd/config:/config
+    depends_on:
+      - netbird
+      - sabnzbd
+    restart: unless-stopped

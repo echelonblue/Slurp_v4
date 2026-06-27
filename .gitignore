@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/
+
+# Persistente data
+config/
+
+# Mediamappen
+downloads/
+music/
+movies/
+tv/
+tmp/

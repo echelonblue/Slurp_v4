@@ -1,0 +1,7 @@
+{
+    local_certs
+}
+
+sabnzbd.netbird.cloud {
+    reverse_proxy localhost:8080
+}

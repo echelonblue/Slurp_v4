@@ -1,0 +1,7 @@
+{
+    local_certs
+}
+
+lidarr.netbird.cloud {
+    reverse_proxy localhost:8686
+}

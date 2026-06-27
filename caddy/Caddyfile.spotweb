@@ -1,0 +1,8 @@
+{
+    local_certs
+    auto_https disable_redirects
+}
+
+spotweb.netbird.cloud {
+    reverse_proxy localhost:80
+}

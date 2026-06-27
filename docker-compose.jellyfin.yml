@@ -1,0 +1,67 @@
+---
+services:
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: netbird_jellyfin
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - NB_SETUP_KEY=${NB_SETUP_KEY_JELLYFIN}
+      - NB_HOSTNAME=jellyfin
+    volumes:
+      - ./config/config_netbird_jellyfin/etc:/etc/netbird
+      - ./config/config_netbird_jellyfin/var:/var/lib/netbird
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    network_mode: service:netbird
+    environment:
+      - TZ=Europe/Amsterdam
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.netbird.cloud
+    volumes:
+      - ./config/config_jellyfin:/config
+      - ./config/config_jellyfin_cache:/cache
+      - ./tv:/media/tv:ro
+      - ./movies:/media/movies:ro
+      - ./music:/media/music:ro
+    # -------------------------------------------------------
+    # HW Transcoding — Intel / AMD (VA-API)
+    # Verwijder de commentaar om te activeren.
+    # Controleer de group ID's op de host:
+    #   getent group video  | cut -d: -f3
+    #   getent group render | cut -d: -f3
+    # -------------------------------------------------------
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # group_add:
+    #   - "44"   # video
+    #   - "104"  # render
+    # -------------------------------------------------------
+    # HW Transcoding — NVIDIA
+    # Vereist: nvidia-container-toolkit op de host
+    # -------------------------------------------------------
+    # runtime: nvidia
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
+    #   - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    depends_on:
+      - netbird
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:alpine
+    container_name: caddy_jellyfin
+    network_mode: service:netbird
+    volumes:
+      - ./caddy/Caddyfile.jellyfin:/etc/caddy/Caddyfile:ro
+      - ./config/config_caddy_jellyfin/data:/data
+      - ./config/config_caddy_jellyfin/config:/config
+    depends_on:
+      - netbird
+      - jellyfin
+    restart: unless-stopped

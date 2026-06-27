@@ -1,0 +1,41 @@
+---
+services:
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=Europe/Amsterdam
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *
+    command: >
+      lidarr
+      radarr
+      sabnzbd
+      sonarr
+      netbird_lidarr
+      netbird_radarr
+      netbird_sabnzbd
+      netbird_sonarr
+      caddy_lidarr
+      caddy_radarr
+      caddy_sabnzbd
+      caddy_sonarr
+      overseerr
+      netbird_overseerr
+      caddy_overseerr
+      spotweb
+      db_spotweb
+      netbird_spotweb
+      caddy_spotweb
+      jellyfin
+      netbird_jellyfin
+      caddy_jellyfin
+      bazarr
+      netbird_bazarr
+      caddy_bazarr
+      lingarr
+      netbird_lingarr
+      caddy_lingarr
+    restart: unless-stopped

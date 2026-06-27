@@ -1,0 +1,46 @@
+---
+services:
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: netbird_sonarr
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - NB_SETUP_KEY=${NB_SETUP_KEY_SONARR}
+      - NB_HOSTNAME=sonarr
+    volumes:
+      - ./config/config_netbird_sonarr/etc:/etc/netbird
+      - ./config/config_netbird_sonarr/var:/var/lib/netbird
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    network_mode: service:netbird
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Amsterdam
+    volumes:
+      - ./config/config_sonarr/data:/config
+      - ./tv:/tv
+      - ./downloads:/downloads
+    depends_on:
+      - netbird
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:alpine
+    container_name: caddy_sonarr
+    network_mode: service:netbird
+    volumes:
+      - ./caddy/Caddyfile.sonarr:/etc/caddy/Caddyfile:ro
+      - ./config/config_caddy_sonarr/data:/data
+      - ./config/config_caddy_sonarr/config:/config
+    depends_on:
+      - netbird
+      - sonarr
+    restart: unless-stopped

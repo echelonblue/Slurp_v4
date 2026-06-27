@@ -1,0 +1,46 @@
+---
+services:
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: netbird_bazarr
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - NB_SETUP_KEY=${NB_SETUP_KEY_BAZARR}
+      - NB_HOSTNAME=bazarr
+    volumes:
+      - ./config/config_netbird_bazarr/etc:/etc/netbird
+      - ./config/config_netbird_bazarr/var:/var/lib/netbird
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    network_mode: service:netbird
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Amsterdam
+    volumes:
+      - ./config/config_bazarr:/config
+      - ./tv:/tv
+      - ./movies:/movies
+    depends_on:
+      - netbird
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:alpine
+    container_name: caddy_bazarr
+    network_mode: service:netbird
+    volumes:
+      - ./caddy/Caddyfile.bazarr:/etc/caddy/Caddyfile:ro
+      - ./config/config_caddy_bazarr/data:/data
+      - ./config/config_caddy_bazarr/config:/config
+    depends_on:
+      - netbird
+      - bazarr
+    restart: unless-stopped
