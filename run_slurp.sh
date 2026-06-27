@@ -14,6 +14,7 @@ docker compose -p spotweb   -f docker-compose.spotweb.yml   up -d
 docker compose -p jellyfin  -f docker-compose.jellyfin.yml  up -d
 docker compose -p bazarr    -f docker-compose.bazarr.yml    up -d
 docker compose -p prowlarr  -f docker-compose.prowlarr.yml  up -d
-docker compose -p shelfarr  -f docker-compose.shelfarr.yml  up -d
+docker compose -p transmission -f docker-compose.transmission.yml up -d
+docker compose -p shelfarr    -f docker-compose.shelfarr.yml    up -d
 docker compose -p lingarr   -f docker-compose.lingarr.yml   up -d
 docker compose -p watchtower -f docker-compose.watchtower.yml up -d

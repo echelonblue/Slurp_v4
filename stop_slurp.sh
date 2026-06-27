@@ -6,8 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 docker compose -p watchtower -f docker-compose.watchtower.yml down
-docker compose -p lingarr    -f docker-compose.lingarr.yml    down
-docker compose -p shelfarr   -f docker-compose.shelfarr.yml   down
+docker compose -p lingarr       -f docker-compose.lingarr.yml       down
+docker compose -p shelfarr      -f docker-compose.shelfarr.yml      down
+docker compose -p transmission  -f docker-compose.transmission.yml  down
 docker compose -p prowlarr   -f docker-compose.prowlarr.yml   down
 docker compose -p bazarr     -f docker-compose.bazarr.yml     down
 docker compose -p jellyfin   -f docker-compose.jellyfin.yml   down

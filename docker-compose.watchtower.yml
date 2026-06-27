@@ -38,6 +38,10 @@ services:
       prowlarr
       netbird_prowlarr
       caddy_prowlarr
+      wireguard_transmission
+      transmission
+      netbird_transmission
+      caddy_transmission
       shelfarr
       netbird_shelfarr
       caddy_shelfarr

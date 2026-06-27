@@ -9,6 +9,7 @@ Elke service draait in een eigen Docker Compose-stack en is individueel bereikba
 | Lidarr     | Muziekbeheer             | 8686          | https://lidarr.netbird.cloud     |
 | Radarr     | Filmbeheer               | 7878          | https://radarr.netbird.cloud     |
 | SABnzbd    | NZB-downloader           | 8080          | https://sabnzbd.netbird.cloud    |
+| Transmission | BitTorrent-client (via P2P VPN) | 9091 | https://transmission.netbird.cloud |
 | Sonarr     | Seriebeheer              | 8989          | https://sonarr.netbird.cloud     |
 | Overseerr  | Verzoekenbeheer          | 5055          | https://overseerr.netbird.cloud  |
 | Spotweb    | Usenet-indexer           | 80            | https://spotweb.netbird.cloud    |
@@ -52,6 +53,7 @@ Doordat alle containers het netwerk-namespace van de Netbird-container delen, is
 ├── docker-compose.lidarr.yml
 ├── docker-compose.radarr.yml
 ├── docker-compose.sabnzbd.yml
+├── docker-compose.transmission.yml
 ├── docker-compose.sonarr.yml
 ├── docker-compose.overseerr.yml
 ├── docker-compose.spotweb.yml
@@ -65,6 +67,7 @@ Doordat alle containers het netwerk-namespace van de Netbird-container delen, is
 │   ├── Caddyfile.lidarr
 │   ├── Caddyfile.radarr
 │   ├── Caddyfile.sabnzbd
+│   ├── Caddyfile.transmission
 │   ├── Caddyfile.sonarr
 │   ├── Caddyfile.overseerr
 │   ├── Caddyfile.spotweb
@@ -77,6 +80,8 @@ Doordat alle containers het netwerk-namespace van de Netbird-container delen, is
 │   ├── config_lidarr/
 │   ├── config_radarr/data/
 │   ├── config_sabznbd/
+│   ├── config_transmission/
+│   ├── config_wireguard_transmission/wg_confs/wg0.conf  # P2P VPN config
 │   ├── config_sonarr/data/
 │   ├── config_overseerr/
 │   ├── config_spotweb/
@@ -118,6 +123,7 @@ Open `.env` en vul per service de bijbehorende waarden in:
 NB_SETUP_KEY_LIDARR=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_RADARR=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_SABNZBD=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+NB_SETUP_KEY_TRANSMISSION=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_SONARR=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_OVERSEERR=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NB_SETUP_KEY_SPOTWEB=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -136,9 +142,10 @@ SPOTWEB_DB_PASSWORD=kies-een-sterk-wachtwoord
 ### 4. Mappen aanmaken
 
 ```bash
-mkdir -p config/config_lidarr config/config_radarr/data config/config_sabznbd config/config_sonarr/data config/config_overseerr config/config_spotweb config/config_spotweb_db config/config_jellyfin config/config_jellyfin_cache config/config_bazarr config/config_prowlarr config/config_shelfarr config/config_lingarr
-mkdir -p config/config_netbird_{lidarr,radarr,sabnzbd,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,shelfarr,lingarr}/{etc,var}
-mkdir -p config/config_caddy_{lidarr,radarr,sabnzbd,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,shelfarr,lingarr}/{data,config}
+mkdir -p config/config_lidarr config/config_radarr/data config/config_sabznbd config/config_transmission config/config_wireguard_transmission/wg_confs config/config_sonarr/data config/config_overseerr config/config_spotweb config/config_spotweb_db config/config_jellyfin config/config_jellyfin_cache config/config_bazarr config/config_prowlarr config/config_shelfarr config/config_lingarr
+mkdir -p config/config_netbird_{lidarr,radarr,sabnzbd,transmission,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,shelfarr,lingarr}/{etc,var}
+mkdir -p config/config_caddy_{lidarr,radarr,sabnzbd,transmission,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,shelfarr,lingarr}/{data,config}
+mkdir -p tmp/tmp_transmission
 mkdir -p downloads music movies tv tmp/tmp_sabnzbd
 ```
 
@@ -184,6 +191,10 @@ Voeg na de eerste login de volgende mappen toe als bibliotheek:
 | Films   | `/media/movies` |
 | Series  | `/media/tv`     |
 | Muziek  | `/media/music`  |
+
+**Transmission — P2P VPN vervangen:**
+
+De WireGuard-config staat in `config/config_wireguard_transmission/wg_confs/wg0.conf`. Vervang dit bestand door een andere provider-config en herstart de stack. De bestandsnaam moet `wg0.conf` blijven.
 
 **Lingarr — Ollama koppelen:**
 

@@ -1,0 +1,62 @@
+---
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard_transmission
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - ./config/config_wireguard_transmission/wg_confs:/config/wg_confs:ro
+      - /lib/modules:/lib/modules:ro
+    restart: unless-stopped
+
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: netbird_transmission
+    network_mode: service:wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - NB_SETUP_KEY=${NB_SETUP_KEY_TRANSMISSION}
+      - NB_HOSTNAME=transmission
+    volumes:
+      - ./config/config_netbird_transmission/etc:/etc/netbird
+      - ./config/config_netbird_transmission/var:/var/lib/netbird
+    depends_on:
+      - wireguard
+    restart: unless-stopped
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    network_mode: service:wireguard
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Amsterdam
+    volumes:
+      - ./config/config_transmission:/config
+      - ./downloads:/downloads
+      - ./tmp/tmp_transmission:/watch
+    depends_on:
+      - wireguard
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:alpine
+    container_name: caddy_transmission
+    network_mode: service:wireguard
+    volumes:
+      - ./caddy/Caddyfile.transmission:/etc/caddy/Caddyfile:ro
+      - ./config/config_caddy_transmission/data:/data
+      - ./config/config_caddy_transmission/config:/config
+    depends_on:
+      - wireguard
+      - transmission
+    restart: unless-stopped
