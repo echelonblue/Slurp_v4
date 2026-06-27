@@ -35,6 +35,9 @@ services:
       bazarr
       netbird_bazarr
       caddy_bazarr
+      prowlarr
+      netbird_prowlarr
+      caddy_prowlarr
       lingarr
       netbird_lingarr
       caddy_lingarr

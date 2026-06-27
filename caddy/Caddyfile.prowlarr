@@ -1,0 +1,7 @@
+{
+    local_certs
+}
+
+prowlarr.netbird.cloud {
+    reverse_proxy localhost:9696
+}

@@ -13,5 +13,6 @@ docker compose -p overseerr -f docker-compose.overseerr.yml up -d
 docker compose -p spotweb   -f docker-compose.spotweb.yml   up -d
 docker compose -p jellyfin  -f docker-compose.jellyfin.yml  up -d
 docker compose -p bazarr    -f docker-compose.bazarr.yml    up -d
+docker compose -p prowlarr  -f docker-compose.prowlarr.yml  up -d
 docker compose -p lingarr   -f docker-compose.lingarr.yml   up -d
 docker compose -p watchtower -f docker-compose.watchtower.yml up -d
