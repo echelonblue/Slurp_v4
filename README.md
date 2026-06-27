@@ -41,6 +41,17 @@ netbird_spotweb  →  Netbird VPN
     └── caddy    →  HTTPS op :443, proxyt naar localhost:80
 ```
 
+Transmission heeft een extra WireGuard-sidecar voor P2P-verkeer:
+
+```
+netbird_transmission  →  Netbird VPN (management/toegang)
+    ├── wireguard     →  wg0: ProtonVPN P2P-tunnel (alleen Transmission-verkeer)
+    ├── transmission  →  BitTorrent-client; al het uitgaand verkeer via wg0
+    └── caddy         →  HTTPS op :443, proxyt naar localhost:9091
+```
+
+WireGuard draait als sidecar in de Netbird-namespace. Via `Table = off` wordt de default route niet gewijzigd: Netbird behoudt zijn eigen verbinding met de management-server. Iptables-markering op UID 1000 (Transmission) stuurt uitsluitend het download- en upload-verkeer via wg0 naar de P2P VPN.
+
 Doordat alle containers het netwerk-namespace van de Netbird-container delen, is de service alleen bereikbaar via het Netbird-IP. Er hoeven geen poorten op de host geopend te worden.
 
 ## Mapstructuur
@@ -192,9 +203,22 @@ Voeg na de eerste login de volgende mappen toe als bibliotheek:
 | Series  | `/media/tv`     |
 | Muziek  | `/media/music`  |
 
-**Transmission — P2P VPN vervangen:**
+**Transmission — P2P VPN instellen:**
 
-De WireGuard-config staat in `config/config_wireguard_transmission/wg_confs/wg0.conf`. Vervang dit bestand door een andere provider-config en herstart de stack. De bestandsnaam moet `wg0.conf` blijven.
+De WireGuard-config staat in `config/config_wireguard_transmission/wg_confs/wg0.conf`. Dit bestand bevat naast de provider-configuratie ook de benodigde routing-regels in het `[Interface]`-blok:
+
+```ini
+Table = off
+PostUp  = ip rule add fwmark 0x4000 table 400 priority 200; ip route add default dev wg0 table 400; iptables -t mangle -A OUTPUT -m owner --uid-owner 1000 -j MARK --set-mark 0x4000
+PostDown= ip rule del fwmark 0x4000 table 400 priority 200; ip route del default dev wg0 table 400; iptables -t mangle -D OUTPUT -m owner --uid-owner 1000 -j MARK --set-mark 0x4000
+```
+
+Bij een andere VPN-provider: vervang de sleutels en het `[Peer]`-blok, maar behoud de `Table`- en `PostUp`/`PostDown`-regels. De bestandsnaam moet `wg0.conf` blijven. Herstart na wijzigingen:
+
+```bash
+docker compose -p transmission -f docker-compose.transmission.yml down
+docker compose -p transmission -f docker-compose.transmission.yml up -d
+```
 
 **Lingarr — Ollama koppelen:**
 

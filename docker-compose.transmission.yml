@@ -1,22 +1,8 @@
 ---
 services:
-  wireguard:
-    image: lscr.io/linuxserver/wireguard:latest
-    container_name: wireguard_transmission
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    volumes:
-      - ./config/config_wireguard_transmission/wg_confs:/config/wg_confs:ro
-      - /lib/modules:/lib/modules:ro
-    restart: unless-stopped
-
   netbird:
     image: netbirdio/netbird:latest
     container_name: netbird_transmission
-    network_mode: service:wireguard
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -28,14 +14,28 @@ services:
     volumes:
       - ./config/config_netbird_transmission/etc:/etc/netbird
       - ./config/config_netbird_transmission/var:/var/lib/netbird
+    restart: unless-stopped
+
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard_transmission
+    network_mode: service:netbird
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - ./config/config_wireguard_transmission/wg_confs:/config/wg_confs
+      - /lib/modules:/lib/modules:ro
     depends_on:
-      - wireguard
+      - netbird
     restart: unless-stopped
 
   transmission:
     image: lscr.io/linuxserver/transmission:latest
     container_name: transmission
-    network_mode: service:wireguard
+    network_mode: service:netbird
     environment:
       - PUID=1000
       - PGID=1000
@@ -45,18 +45,19 @@ services:
       - ./downloads:/downloads
       - ./tmp/tmp_transmission:/watch
     depends_on:
+      - netbird
       - wireguard
     restart: unless-stopped
 
   caddy:
     image: caddy:alpine
     container_name: caddy_transmission
-    network_mode: service:wireguard
+    network_mode: service:netbird
     volumes:
       - ./caddy/Caddyfile.transmission:/etc/caddy/Caddyfile:ro
       - ./config/config_caddy_transmission/data:/data
       - ./config/config_caddy_transmission/config:/config
     depends_on:
-      - wireguard
+      - netbird
       - transmission
     restart: unless-stopped
