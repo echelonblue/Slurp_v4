@@ -41,16 +41,16 @@ netbird_spotweb  →  Netbird VPN
     └── caddy    →  HTTPS op :443, proxyt naar localhost:80
 ```
 
-Transmission heeft een extra WireGuard-sidecar voor P2P-verkeer:
+Transmission gebruikt WireGuard als basis-namespace — al het verkeer gaat via ProtonVPN:
 
 ```
-netbird_transmission  →  Netbird VPN (management/toegang)
-    ├── wireguard     →  wg0: ProtonVPN P2P-tunnel (alleen Transmission-verkeer)
-    ├── transmission  →  BitTorrent-client; al het uitgaand verkeer via wg0
-    └── caddy         →  HTTPS op :443, proxyt naar localhost:9091
+wireguard_transmission  →  wg0: ProtonVPN P2P-tunnel (default route voor alle containers)
+    ├── netbird         →  Netbird VPN — verbindt via ProtonVPN, beheert wt0
+    ├── transmission    →  BitTorrent-client; al het verkeer via wg0
+    └── caddy           →  HTTPS op :443, bereikbaar via wt0 (Netbird-IP)
 ```
 
-WireGuard draait als sidecar in de Netbird-namespace. Via `Table = off` wordt de default route niet gewijzigd: Netbird behoudt zijn eigen verbinding met de management-server. Iptables-markering op UID 1000 (Transmission) stuurt uitsluitend het download- en upload-verkeer via wg0 naar de P2P VPN.
+WireGuard is de base-container. Alle containers delen zijn netwerk-namespace en sturen al hun verkeer via `wg0` (ProtonVPN). Netbird verbindt door via ProtonVPN en maakt `wt0` aan voor beheer-toegang. Een healthcheck garandeert dat de WireGuard-handshake geslaagd is vóór de andere containers starten; DNS loopt via `1.1.1.1` en is bereikbaar door de tunnel.
 
 Doordat alle containers het netwerk-namespace van de Netbird-container delen, is de service alleen bereikbaar via het Netbird-IP. Er hoeven geen poorten op de host geopend te worden.
 
@@ -156,8 +156,8 @@ SPOTWEB_DB_PASSWORD=kies-een-sterk-wachtwoord
 mkdir -p config/config_lidarr config/config_radarr/data config/config_sabznbd config/config_transmission config/config_wireguard_transmission/wg_confs config/config_sonarr/data config/config_overseerr config/config_spotweb config/config_spotweb_db config/config_jellyfin config/config_jellyfin_cache config/config_bazarr config/config_prowlarr config/config_shelfarr config/config_lingarr
 mkdir -p config/config_netbird_{lidarr,radarr,sabnzbd,transmission,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,shelfarr,lingarr}/{etc,var}
 mkdir -p config/config_caddy_{lidarr,radarr,sabnzbd,transmission,sonarr,overseerr,spotweb,jellyfin,bazarr,prowlarr,shelfarr,lingarr}/{data,config}
-mkdir -p tmp/tmp_transmission
-mkdir -p downloads music movies tv tmp/tmp_sabnzbd
+mkdir -p tmp/tmp_transmission tmp/tmp_sabnzbd tmp/tmp_sabnzbd_watch
+mkdir -p downloads/complete downloads/incomplete music movies tv
 ```
 
 ### 5. Netbird ACL instellen
@@ -203,22 +203,48 @@ Voeg na de eerste login de volgende mappen toe als bibliotheek:
 | Series  | `/media/tv`     |
 | Muziek  | `/media/music`  |
 
+**SABnzbd — mappen instellen:**
+
+Stel in `Config → Folders` de volgende paden in:
+
+| Instelling            | Pad in container        |
+|-----------------------|-------------------------|
+| Temporary Download    | `/incomplete-downloads` |
+| Completed Download    | `/downloads`            |
+| Watched Folder        | `/watch`                |
+
 **Transmission — P2P VPN instellen:**
 
-De WireGuard-config staat in `config/config_wireguard_transmission/wg_confs/wg0.conf`. Dit bestand bevat naast de provider-configuratie ook de benodigde routing-regels in het `[Interface]`-blok:
+De WireGuard-config staat in `config/config_wireguard_transmission/wg_confs/wg0.conf`. Dit is een standaard WireGuard/ProtonVPN-config zonder aanpassingen — de `DNS`-regel wordt weggelaten omdat Docker de DNS-resolver (`1.1.1.1`) zelf instelt:
 
 ```ini
-Table = off
-PostUp  = ip rule add fwmark 0x4000 table 400 priority 200; ip route add default dev wg0 table 400; iptables -t mangle -A OUTPUT -m owner --uid-owner 1000 -j MARK --set-mark 0x4000
-PostDown= ip rule del fwmark 0x4000 table 400 priority 200; ip route del default dev wg0 table 400; iptables -t mangle -D OUTPUT -m owner --uid-owner 1000 -j MARK --set-mark 0x4000
+[Interface]
+PrivateKey = <jouw private key>
+Address = 10.2.0.2/32
+
+[Peer]
+PublicKey = <server public key>
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = <server>:51820
+PersistentKeepalive = 25
 ```
 
-Bij een andere VPN-provider: vervang de sleutels en het `[Peer]`-blok, maar behoud de `Table`- en `PostUp`/`PostDown`-regels. De bestandsnaam moet `wg0.conf` blijven. Herstart na wijzigingen:
+`AllowedIPs = 0.0.0.0/0` stuurt al het uitgaande verkeer door wg0 — dit zorgt voor de kill-switch: als de VPN wegvalt, heeft Transmission geen internetverbinding meer.
+
+Bij een andere VPN-provider: vervang het `[Interface]`- en `[Peer]`-blok volledig door de config van de provider. De bestandsnaam moet `wg0.conf` blijven. Herstart na wijzigingen:
 
 ```bash
 docker compose -p transmission -f docker-compose.transmission.yml down
 docker compose -p transmission -f docker-compose.transmission.yml up -d
 ```
+
+Controleer of Transmission via de VPN verbindt:
+
+```bash
+docker exec --user=1000 transmission curl -s https://ipinfo.io/ip
+```
+
+Dit toont het IP van de VPN-server (niet het thuisnetwerk).
 
 **Lingarr — Ollama koppelen:**
 

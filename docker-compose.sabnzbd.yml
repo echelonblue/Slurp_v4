@@ -28,6 +28,7 @@ services:
       - ./config/config_sabznbd:/config
       - ./tmp/tmp_sabnzbd:/incomplete-downloads
       - ./downloads:/downloads
+      - ./tmp/tmp_sabnzbd_watch:/watch
     depends_on:
       - netbird
     restart: unless-stopped
