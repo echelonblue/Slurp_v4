@@ -164,19 +164,9 @@ mkdir -p downloads/complete downloads/incomplete music movies tv
 
 ### 5. Netbird ACL instellen
 
-Netbird blokkeert standaard al het inkomende verkeer. Maak een policy aan in het dashboard:
+Netbird hanteert **default deny** — peers kunnen elkaar niet bereiken tenzij een policy dat toestaat. De volledige zero trust configuratie met groepen en gerichte policies staat beschreven in [`SETUP.md → Netbird Zero Trust firewall`](SETUP.md).
 
-`Access Control → Policies → Add Policy`
-
-| Veld        | Waarde |
-|-------------|--------|
-| Source      | `All`  |
-| Destination | `All`  |
-| Protocol    | TCP    |
-| Port        | 443    |
-| Action      | Accept |
-
-> Tijdelijke workaround als de policy niet direct werkt:
+> Tijdelijke workaround als een policy niet direct werkt:
 > ```bash
 > docker exec netbird_<service> iptables -I INPUT 1 -i wt0 -p tcp --dport 443 -j ACCEPT
 > ```

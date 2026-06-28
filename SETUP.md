@@ -1,8 +1,110 @@
 # Slurp — Minimale configuratie per dienst
 
-Dit document beschrijft de handelingen die na de eerste start nodig zijn om elke dienst werkend te krijgen. Volg de volgorde: SABnzbd en Transmission eerst, dan Prowlarr, dan de *arr-apps, dan Bazarr, Jellyfin en Overseerr.
+Dit document beschrijft de handelingen die na de eerste start nodig zijn om elke dienst werkend te krijgen. Volg de volgorde: Netbird ACL eerst, dan SABnzbd en Transmission, dan Prowlarr, dan de *arr-apps, dan Bazarr, Jellyfin en Overseerr.
 
 Alle diensten zijn bereikbaar via hun Netbird-hostname op poort 443 (HTTPS). Interne koppelingen tussen diensten verlopen ook via deze hostnames.
+
+---
+
+## 0. Netbird — Zero Trust firewall
+
+Netbird hanteert standaard **default deny**: peers kunnen elkaar niet bereiken tenzij een policy dat expliciet toestaat. Dit is het fundament van zero trust — alleen het verkeer dat nodig is wordt toegestaan.
+
+### Groepen aanmaken
+
+Maak in het Netbird-dashboard (`Groups`) de volgende groepen aan en voeg de bijbehorende peers toe:
+
+| Groep          | Peers                                                                 |
+|----------------|-----------------------------------------------------------------------|
+| `clients`      | Alle persoonlijke apparaten (laptop, telefoon, tablet, ...)           |
+| `arr-apps`     | `sonarr`, `radarr`, `lidarr`                                          |
+| `downloaders`  | `sabnzbd`, `transmission`                                             |
+| `indexers`     | `prowlarr`, `spotweb`                                                 |
+| `media`        | `jellyfin`                                                            |
+| `support`      | `bazarr`, `overseerr`, `shelfarr`, `lingarr`, `watchtower`           |
+
+> Peers verschijnen in het dashboard zodra de containers voor het eerst verbinding maken met Netbird. Voeg ze toe aan de juiste groep via `Peers → [peer] → Groups`.
+
+### Policies aanmaken
+
+Maak in `Access Control → Policies` de volgende regels aan. Elke policy heeft een source-groep, een destination-groep, een protocol en een poort.
+
+#### Policy 1 — Clients bereiken alle diensten
+
+| Veld        | Waarde                                                         |
+|-------------|----------------------------------------------------------------|
+| Source      | `clients`                                                      |
+| Destination | `arr-apps`, `downloaders`, `indexers`, `media`, `support`      |
+| Protocol    | TCP                                                            |
+| Poort       | 443                                                            |
+| Action      | Accept                                                         |
+
+#### Policy 2 — *arr-apps sturen downloads naar downloaders
+
+| Veld        | Waarde          |
+|-------------|-----------------|
+| Source      | `arr-apps`      |
+| Destination | `downloaders`   |
+| Protocol    | TCP             |
+| Poorten     | 443, 9091       |
+| Action      | Accept          |
+
+#### Policy 3 — *arr-apps bevragen indexers
+
+| Veld        | Waarde      |
+|-------------|-------------|
+| Source      | `arr-apps`  |
+| Destination | `indexers`  |
+| Protocol    | TCP         |
+| Poort       | 443         |
+| Action      | Accept      |
+
+#### Policy 4 — Prowlarr synchroniseert terug naar *arr-apps
+
+| Veld        | Waarde      |
+|-------------|-------------|
+| Source      | `indexers`  |
+| Destination | `arr-apps`  |
+| Protocol    | TCP         |
+| Poort       | 443         |
+| Action      | Accept      |
+
+#### Policy 5 — Support-diensten koppelen met *arr-apps
+
+Bazarr, Overseerr en Lingarr moeten Sonarr en Radarr kunnen bereiken.
+
+| Veld        | Waarde      |
+|-------------|-------------|
+| Source      | `support`   |
+| Destination | `arr-apps`  |
+| Protocol    | TCP         |
+| Poort       | 443         |
+| Action      | Accept      |
+
+#### Policy 6 — Overseerr bereikt Jellyfin
+
+| Veld        | Waarde      |
+|-------------|-------------|
+| Source      | `support`   |
+| Destination | `media`     |
+| Protocol    | TCP         |
+| Poort       | 443         |
+| Action      | Accept      |
+
+### Overzicht verkeersmatrix
+
+```
+clients       → arr-apps, downloaders, indexers, media, support  : TCP 443
+arr-apps      → downloaders                                       : TCP 443, 9091
+arr-apps      → indexers                                          : TCP 443
+indexers      → arr-apps                                          : TCP 443
+support       → arr-apps                                          : TCP 443
+support       → media                                             : TCP 443
+```
+
+Alle overige verbindingen worden geblokkeerd. Downloaders kunnen bijvoorbeeld niet naar buiten communiceren via het Netbird-netwerk, en media-peers kunnen geen *arr-apps aanspreken.
+
+> **Let op:** Transmission heeft geen Netbird-poort 443 nodig voor inkomend verkeer van clients — die verbinding loopt al via TCP 9091. Voeg eventueel TCP 9091 toe aan Policy 1 als je de Transmission web-UI ook rechtstreeks wilt bereiken zonder Caddy.
 
 ---
 
