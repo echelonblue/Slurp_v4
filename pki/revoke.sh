@@ -24,6 +24,16 @@ status() {
     echo "[$(date +"%H:%M:%S")] $*"
 }
 
+# ── Hulpfunctie: private key extraheren uit PFX ───────────────────────────────
+pfx_extract_key() {
+    local PFX="$1" PASS="$2" OUT="$3"
+    openssl pkcs12 -in "$PFX" -nocerts -nodes \
+        -passin "pass:$PASS" -out "$OUT" -legacy 2>/dev/null && return 0
+    openssl pkcs12 -in "$PFX" -nocerts -nodes \
+        -passin "pass:$PASS" -out "$OUT" 2>/dev/null && return 0
+    return 1
+}
+
 cert_info() {
     local CRT="$1"
     local SUBJECT EXPIRY SERIAL
@@ -36,8 +46,10 @@ cert_info() {
 }
 
 # ── Voorwaarden controleren ───────────────────────────────────────────────────
-if [ ! -f "$ISSUING_CONF" ]; then
-    echo "FOUT: Issuing CA niet gevonden. Voer eerst ca_gen.sh uit."
+if [ ! -f "$ISSUING_CONF" ] || \
+   [ ! -f "$ISSUING_DIR/private/issuing-ca.pfx" ] || \
+   [ ! -f "$ROOT_DIR/private/root-ca.pfx" ]; then
+    echo "FOUT: CA PFX bestanden niet gevonden. Voer eerst ca_gen.sh uit."
     exit 1
 fi
 
@@ -112,6 +124,58 @@ if [ "$CONFIRM" != "ja" ]; then
     exit 0
 fi
 
+# ── Wachtwoorden vragen ───────────────────────────────────────────────────────
+echo ""
+echo "CA private keys vereist voor intrekking en CRL-vernieuwing."
+read -rsp "Wachtwoord Issuing CA PFX: " ISSUING_PFX_PASS
+echo ""
+read -rsp "Wachtwoord Root CA PFX:    " ROOT_PFX_PASS
+echo ""
+
+# ── Beveiligde temp-directory aanmaken ────────────────────────────────────────
+SECURE_TMP="$(mktemp -d)"
+chmod 700 "$SECURE_TMP"
+TEMP_ISSUING_KEY="$SECURE_TMP/issuing-ca.key"
+TEMP_ROOT_KEY="$SECURE_TMP/root-ca.key"
+
+cleanup_secure() {
+    for f in "$SECURE_TMP"/*; do
+        [ -f "$f" ] && openssl rand -out "$f" 128 2>/dev/null || true
+    done
+    rm -rf "$SECURE_TMP"
+}
+trap cleanup_secure EXIT
+
+# ── Private keys extraheren uit PFX ──────────────────────────────────────────
+if ! pfx_extract_key \
+        "$ISSUING_DIR/private/issuing-ca.pfx" \
+        "$ISSUING_PFX_PASS" \
+        "$TEMP_ISSUING_KEY"; then
+    echo "FOUT: Kon Issuing CA private key niet extraheren."
+    echo "      Controleer het wachtwoord en probeer opnieuw."
+    exit 1
+fi
+unset ISSUING_PFX_PASS
+chmod 400 "$TEMP_ISSUING_KEY"
+
+if ! pfx_extract_key \
+        "$ROOT_DIR/private/root-ca.pfx" \
+        "$ROOT_PFX_PASS" \
+        "$TEMP_ROOT_KEY"; then
+    echo "FOUT: Kon Root CA private key niet extraheren."
+    echo "      Controleer het wachtwoord en probeer opnieuw."
+    exit 1
+fi
+unset ROOT_PFX_PASS
+chmod 400 "$TEMP_ROOT_KEY"
+
+if [ ! -s "$TEMP_ISSUING_KEY" ] || [ ! -s "$TEMP_ROOT_KEY" ]; then
+    echo "FOUT: Een of meer geëxtraheerde keys zijn leeg."
+    exit 1
+fi
+
+status "CA private keys geladen uit PFX."
+
 echo ""
 status "=== Certificaat intrekken ==="
 
@@ -119,6 +183,7 @@ status "=== Certificaat intrekken ==="
 status "Certificaat $SELECTED_NAME intrekken (reden: $REASON)..."
 openssl ca \
     -config "$ISSUING_CONF" \
+    -keyfile "$TEMP_ISSUING_KEY" \
     -revoke "$SELECTED_CRT" \
     -crl_reason "$REASON" \
     2>/dev/null
@@ -127,12 +192,14 @@ openssl ca \
 status "Issuing CA CRL bijwerken..."
 openssl ca -gencrl \
     -config "$ISSUING_CONF" \
+    -keyfile "$TEMP_ISSUING_KEY" \
     -out "$ISSUING_DIR/issuing-ca.crl" \
     2>/dev/null
 
 status "Root CA CRL bijwerken..."
 openssl ca -gencrl \
     -config "$ROOT_CONF" \
+    -keyfile "$TEMP_ROOT_KEY" \
     -out "$ROOT_DIR/root-ca.crl" \
     2>/dev/null
 

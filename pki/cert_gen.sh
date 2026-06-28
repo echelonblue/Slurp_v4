@@ -35,12 +35,62 @@ status() {
     echo "[$(date +"%H:%M:%S")] $*"
 }
 
+# ── Hulpfunctie: private key extraheren uit PFX ───────────────────────────────
+pfx_extract_key() {
+    local PFX="$1" PASS="$2" OUT="$3"
+    # Probeer met -legacy (OpenSSL 3.x met legacy-versleuteling)
+    openssl pkcs12 -in "$PFX" -nocerts -nodes \
+        -passin "pass:$PASS" -out "$OUT" -legacy 2>/dev/null && return 0
+    # Fallback zonder -legacy (LibreSSL op macOS)
+    openssl pkcs12 -in "$PFX" -nocerts -nodes \
+        -passin "pass:$PASS" -out "$OUT" 2>/dev/null && return 0
+    return 1
+}
+
 # ── Voorwaarden controleren ───────────────────────────────────────────────────
-if [ ! -f "$ISSUING_DIR/issuing-ca.crt" ] || [ ! -f "$ISSUING_DIR/private/issuing-ca.key" ]; then
-    echo "FOUT: Issuing CA niet gevonden. Voer eerst ca_gen.sh uit."
+if [ ! -f "$ISSUING_DIR/issuing-ca.crt" ] || \
+   [ ! -f "$ISSUING_DIR/private/issuing-ca.pfx" ]; then
+    echo "FOUT: Issuing CA PFX niet gevonden. Voer eerst ca_gen.sh uit."
     exit 1
 fi
 
+# ── Beveiligde temp-directory aanmaken ────────────────────────────────────────
+SECURE_TMP="$(mktemp -d)"
+chmod 700 "$SECURE_TMP"
+TEMP_ISSUING_KEY="$SECURE_TMP/issuing-ca.key"
+
+cleanup_secure() {
+    for f in "$SECURE_TMP"/*; do
+        [ -f "$f" ] && openssl rand -out "$f" 128 2>/dev/null || true
+    done
+    rm -rf "$SECURE_TMP"
+}
+trap cleanup_secure EXIT
+
+# ── Wachtwoord vragen ─────────────────────────────────────────────────────────
+echo ""
+echo "Issuing CA PFX wachtwoord vereist voor certificaatondertekening."
+read -rsp "Wachtwoord Issuing CA: " ISSUING_PFX_PASS
+echo ""
+
+# ── Private key extraheren uit PFX ───────────────────────────────────────────
+if ! pfx_extract_key \
+        "$ISSUING_DIR/private/issuing-ca.pfx" \
+        "$ISSUING_PFX_PASS" \
+        "$TEMP_ISSUING_KEY"; then
+    echo "FOUT: Kon Issuing CA private key niet extraheren."
+    echo "      Controleer het wachtwoord en probeer opnieuw."
+    exit 1
+fi
+unset ISSUING_PFX_PASS
+chmod 400 "$TEMP_ISSUING_KEY"
+
+if [ ! -s "$TEMP_ISSUING_KEY" ]; then
+    echo "FOUT: Geëxtraheerde key is leeg. Controleer het wachtwoord."
+    exit 1
+fi
+
+status "Issuing CA private key geladen uit PFX."
 status "=== Server certificaten aanmaken ==="
 status "Issuing CA: $ISSUING_DIR/issuing-ca.crt"
 status "Domein:     *.${DOMAIN}"
@@ -100,9 +150,10 @@ EOF
         -key "$KEY" \
         -out "$CSR" 2>/dev/null
 
-    # Ondertekenen met Issuing CA
+    # Ondertekenen met Issuing CA (tijdelijke key overschrijft config-pad)
     openssl ca -batch \
         -config "$ISSUING_CONF" \
+        -keyfile "$TEMP_ISSUING_KEY" \
         -extensions server_cert_ext \
         -extfile "$CONF" \
         -days "$DAYS" \
