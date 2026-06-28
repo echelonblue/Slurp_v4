@@ -11,6 +11,8 @@ services:
     environment:
       - NB_SETUP_KEY=${NB_SETUP_KEY_BAZARR}
       - NB_HOSTNAME=bazarr
+      - NB_ROSENPASS_ENABLED=true
+      - NB_ROSENPASS_PERMISSIVE=true
     volumes:
       - ./config/config_netbird_bazarr/etc:/etc/netbird
       - ./config/config_netbird_bazarr/var:/var/lib/netbird

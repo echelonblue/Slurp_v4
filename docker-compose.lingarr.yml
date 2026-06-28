@@ -11,6 +11,8 @@ services:
     environment:
       - NB_SETUP_KEY=${NB_SETUP_KEY_LINGARR}
       - NB_HOSTNAME=lingarr
+      - NB_ROSENPASS_ENABLED=true
+      - NB_ROSENPASS_PERMISSIVE=true
     volumes:
       - ./config/config_netbird_lingarr/etc:/etc/netbird
       - ./config/config_netbird_lingarr/var:/var/lib/netbird

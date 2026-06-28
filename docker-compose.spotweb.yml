@@ -11,6 +11,8 @@ services:
     environment:
       - NB_SETUP_KEY=${NB_SETUP_KEY_SPOTWEB}
       - NB_HOSTNAME=spotweb
+      - NB_ROSENPASS_ENABLED=true
+      - NB_ROSENPASS_PERMISSIVE=true
     volumes:
       - ./config/config_netbird_spotweb/etc:/etc/netbird
       - ./config/config_netbird_spotweb/var:/var/lib/netbird

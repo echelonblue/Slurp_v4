@@ -11,6 +11,8 @@ services:
     environment:
       - NB_SETUP_KEY=${NB_SETUP_KEY_SONARR}
       - NB_HOSTNAME=sonarr
+      - NB_ROSENPASS_ENABLED=true
+      - NB_ROSENPASS_PERMISSIVE=true
     volumes:
       - ./config/config_netbird_sonarr/etc:/etc/netbird
       - ./config/config_netbird_sonarr/var:/var/lib/netbird

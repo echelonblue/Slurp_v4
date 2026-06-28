@@ -11,6 +11,8 @@ services:
     environment:
       - NB_SETUP_KEY=${NB_SETUP_KEY_RADARR}
       - NB_HOSTNAME=radarr
+      - NB_ROSENPASS_ENABLED=true
+      - NB_ROSENPASS_PERMISSIVE=true
     volumes:
       - ./config/config_netbird_radarr/etc:/etc/netbird
       - ./config/config_netbird_radarr/var:/var/lib/netbird

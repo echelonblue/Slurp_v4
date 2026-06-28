@@ -11,6 +11,8 @@ services:
     environment:
       - NB_SETUP_KEY=${NB_SETUP_KEY_LIDARR}
       - NB_HOSTNAME=lidarr
+      - NB_ROSENPASS_ENABLED=true
+      - NB_ROSENPASS_PERMISSIVE=true
     volumes:
       - ./config/config_netbird_lidarr/etc:/etc/netbird
       - ./config/config_netbird_lidarr/var:/var/lib/netbird

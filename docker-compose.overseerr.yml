@@ -11,6 +11,8 @@ services:
     environment:
       - NB_SETUP_KEY=${NB_SETUP_KEY_OVERSEERR}
       - NB_HOSTNAME=overseerr
+      - NB_ROSENPASS_ENABLED=true
+      - NB_ROSENPASS_PERMISSIVE=true
     volumes:
       - ./config/config_netbird_overseerr/etc:/etc/netbird
       - ./config/config_netbird_overseerr/var:/var/lib/netbird

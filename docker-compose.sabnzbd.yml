@@ -11,6 +11,8 @@ services:
     environment:
       - NB_SETUP_KEY=${NB_SETUP_KEY_SABNZBD}
       - NB_HOSTNAME=sabnzbd
+      - NB_ROSENPASS_ENABLED=true
+      - NB_ROSENPASS_PERMISSIVE=true
     volumes:
       - ./config/config_netbird_sabnzbd/etc:/etc/netbird
       - ./config/config_netbird_sabnzbd/var:/var/lib/netbird
