@@ -110,7 +110,8 @@ Doordat alle containers het netwerk-namespace van de Netbird-container delen, is
 ├── music/                            # Lidarr en Jellyfin mediamap
 ├── movies/                           # Radarr, Bazarr en Jellyfin mediamap
 ├── tv/                               # Sonarr, Bazarr en Jellyfin mediamap
-├── tmp/tmp_sabnzbd/                  # SABnzbd tijdelijke bestanden```
+├── tmp/tmp_sabnzbd/                  # SABnzbd tijdelijke bestanden
+```
 
 ## Installatie
 
@@ -246,6 +247,27 @@ docker exec --user=1000 transmission curl -s https://ipinfo.io/ip
 ```
 
 Dit toont het IP van de VPN-server (niet het thuisnetwerk).
+
+**Transmission — download client in Sonarr, Radarr en Lidarr:**
+
+Voeg in elk van de drie apps via `Settings → Download Clients → +` een nieuwe Transmission-client toe:
+
+| Veld      | Waarde                                                        |
+|-----------|---------------------------------------------------------------|
+| Name      | Transmission                                                  |
+| Host      | `transmission.netbird.cloud`                                  |
+| Port      | `9091`                                                        |
+| Use SSL   | Nee                                                           |
+| URL Base  | `/transmission/`                                              |
+| Username  | `xor`                                                         |
+| Password  | zie `.env` → `TRANSMISSION_PASS`                             |
+| Category  | `tv` (Sonarr) / `movies` (Radarr) / `music` (Lidarr)        |
+
+Klik na het invullen op **Test** om de verbinding te controleren. Het Netbird-IP is op te vragen met:
+
+```bash
+docker exec netbird_transmission netbird status
+```
 
 **Lingarr — Ollama koppelen:**
 

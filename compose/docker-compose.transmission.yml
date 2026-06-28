@@ -52,6 +52,8 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Amsterdam
+      - USER=${TRANSMISSION_USER}
+      - PASS=${TRANSMISSION_PASS}
     volumes:
       - ./config/config_transmission:/config
       - ./downloads:/downloads
