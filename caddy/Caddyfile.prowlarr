@@ -1,7 +1,7 @@
 {
-    local_certs
 }
 
 prowlarr.netbird.cloud {
+    tls /data/prowlarr.crt /data/prowlarr.key
     reverse_proxy localhost:9696
 }

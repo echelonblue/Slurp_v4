@@ -1,7 +1,7 @@
 {
-    local_certs
 }
 
 transmission.netbird.cloud {
+    tls /data/transmission.crt /data/transmission.key
     reverse_proxy localhost:9091
 }

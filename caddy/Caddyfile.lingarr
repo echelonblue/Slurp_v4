@@ -1,7 +1,7 @@
 {
-    local_certs
 }
 
 lingarr.netbird.cloud {
+    tls /data/lingarr.crt /data/lingarr.key
     reverse_proxy localhost:80
 }

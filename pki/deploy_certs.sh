@@ -5,35 +5,20 @@ PKI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$PKI_DIR/.." && pwd)"
 CERTS_DIR="$PKI_DIR/out/certs"
 
-# ── Service → Caddy container en config map ───────────────────────────────────
-declare -A CADDY_CONTAINER=(
-    [lidarr]="caddy_lidarr"
-    [radarr]="caddy_radarr"
-    [sabnzbd]="caddy_sabnzbd"
-    [transmission]="caddy_transmission"
-    [sonarr]="caddy_sonarr"
-    [overseerr]="caddy_overseerr"
-    [spotweb]="caddy_spotweb"
-    [jellyfin]="caddy_jellyfin"
-    [bazarr]="caddy_bazarr"
-    [prowlarr]="caddy_prowlarr"
-    [shelfarr]="caddy_shelfarr"
-    [lingarr]="caddy_lingarr"
-)
-
-declare -A COMPOSE_PROJECT=(
-    [lidarr]="lidarr"
-    [radarr]="radarr"
-    [sabnzbd]="sabnzbd"
-    [transmission]="transmission"
-    [sonarr]="sonarr"
-    [overseerr]="overseerr"
-    [spotweb]="spotweb"
-    [jellyfin]="jellyfin"
-    [bazarr]="bazarr"
-    [prowlarr]="prowlarr"
-    [shelfarr]="shelfarr"
-    [lingarr]="lingarr"
+# Container = caddy_<service>, project = <service> — geen associatieve arrays nodig
+SERVICES=(
+    bazarr
+    jellyfin
+    lidarr
+    lingarr
+    overseerr
+    prowlarr
+    radarr
+    sabnzbd
+    shelfarr
+    sonarr
+    spotweb
+    transmission
 )
 
 status() {
@@ -48,7 +33,7 @@ fi
 
 # ── Controleer welke services een cert hebben ─────────────────────────────────
 AVAILABLE=()
-for SERVICE in "${!CADDY_CONTAINER[@]}"; do
+for SERVICE in "${SERVICES[@]}"; do
     if [ -f "$CERTS_DIR/$SERVICE/${SERVICE}.key" ] && \
        [ -f "$CERTS_DIR/$SERVICE/${SERVICE}-chain.pem" ]; then
         AVAILABLE+=("$SERVICE")
@@ -61,13 +46,10 @@ if [ ${#AVAILABLE[@]} -eq 0 ]; then
     exit 1
 fi
 
-# Sorteer voor consistente weergave
-IFS=$'\n' AVAILABLE=($(sort <<< "${AVAILABLE[*]}")); unset IFS
-
 # ── Controleer draaiende Caddy containers ─────────────────────────────────────
 RUNNING=()
 for SERVICE in "${AVAILABLE[@]}"; do
-    CONTAINER="${CADDY_CONTAINER[$SERVICE]}"
+    CONTAINER="caddy_${SERVICE}"
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${CONTAINER}$"; then
         RUNNING+=("$CONTAINER")
     fi
@@ -100,7 +82,7 @@ echo "Acties:"
 echo "  1. Caddy containers stoppen (indien actief)"
 echo "  2. Certificaat en sleutel kopiëren naar config/config_caddy_<service>/data/"
 echo "  3. Caddyfiles bijwerken: local_certs vervangen door tls /data/<service>.crt"
-echo "  4. Containers worden NIET herstart — doe dit handmatig na controle"
+echo "  4. Gestopte containers herstarten"
 echo ""
 read -rp "Typ 'ja' om te bevestigen: " CONFIRM
 [ "$CONFIRM" = "ja" ] || { echo "Afgebroken."; exit 0; }
@@ -112,11 +94,10 @@ status "=== Deployment gestart ==="
 if [ ${#RUNNING[@]} -gt 0 ]; then
     status "Caddy containers stoppen..."
     for SERVICE in "${AVAILABLE[@]}"; do
-        CONTAINER="${CADDY_CONTAINER[$SERVICE]}"
-        PROJECT="${COMPOSE_PROJECT[$SERVICE]}"
+        CONTAINER="caddy_${SERVICE}"
         if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${CONTAINER}$"; then
             docker compose \
-                -p "$PROJECT" \
+                -p "$SERVICE" \
                 --project-directory "$PROJECT_DIR" \
                 -f "$PROJECT_DIR/compose/docker-compose.${SERVICE}.yml" \
                 stop caddy 2>/dev/null
@@ -125,7 +106,7 @@ if [ ${#RUNNING[@]} -gt 0 ]; then
     done
 fi
 
-# ── Certificaten uitrollen ─────────────────────────────────────────────────────
+# ── Certificaten uitrollen ────────────────────────────────────────────────────
 for SERVICE in "${AVAILABLE[@]}"; do
     DEST_DIR="$PROJECT_DIR/config/config_caddy_${SERVICE}/data"
     CADDYFILE="$PROJECT_DIR/caddy/Caddyfile.${SERVICE}"
@@ -133,25 +114,21 @@ for SERVICE in "${AVAILABLE[@]}"; do
 
     mkdir -p "$DEST_DIR"
 
-    # Kopieer chain (cert + issuing CA) en private key
     cp "$CERTS_DIR/$SERVICE/${SERVICE}-chain.pem" "$DEST_DIR/${SERVICE}.crt"
     cp "$CERTS_DIR/$SERVICE/${SERVICE}.key"        "$DEST_DIR/${SERVICE}.key"
     chmod 644 "$DEST_DIR/${SERVICE}.crt"
     chmod 600 "$DEST_DIR/${SERVICE}.key"
 
-    # Caddyfile bijwerken: local_certs verwijderen, tls directive toevoegen
+    # Caddyfile bijwerken via Python3 (werkt op alle platformen)
     python3 - "$CADDYFILE" "$FQDN" "$SERVICE" << 'PYEOF'
 import sys, re
 
 caddyfile, fqdn, service = sys.argv[1], sys.argv[2], sys.argv[3]
 content = open(caddyfile).read()
 
-# Verwijder local_certs uit global block
 content = re.sub(r'\n    local_certs\n', '\n', content)
 
-# Voeg tls directive toe als die er nog niet in zit
 tls_line = f'    tls /data/{service}.crt /data/{service}.key'
-site_pattern = re.escape(fqdn) + r' \{'
 if tls_line not in content:
     content = re.sub(
         f'({re.escape(fqdn)}' + r' \{)',
@@ -165,14 +142,14 @@ PYEOF
     status "  $SERVICE  →  $DEST_DIR/"
 done
 
-# ── Caddy containers herstarten die door dit script gestopt zijn ──────────────
+# ── Caddy containers herstarten ───────────────────────────────────────────────
 if [ ${#RUNNING[@]} -gt 0 ]; then
     status "Gestopte Caddy containers herstarten..."
     for SERVICE in "${AVAILABLE[@]}"; do
-        CONTAINER="${CADDY_CONTAINER[$SERVICE]}"
+        CONTAINER="caddy_${SERVICE}"
         if printf '%s\n' "${RUNNING[@]}" | grep -q "^${CONTAINER}$"; then
             docker compose \
-                -p "${COMPOSE_PROJECT[$SERVICE]}" \
+                -p "$SERVICE" \
                 --project-directory "$PROJECT_DIR" \
                 -f "$PROJECT_DIR/compose/docker-compose.${SERVICE}.yml" \
                 start caddy 2>/dev/null

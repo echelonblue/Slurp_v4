@@ -1,7 +1,7 @@
 {
-    local_certs
 }
 
 jellyfin.netbird.cloud {
+    tls /data/jellyfin.crt /data/jellyfin.key
     reverse_proxy localhost:8096
 }

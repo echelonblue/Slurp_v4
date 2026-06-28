@@ -1,8 +1,8 @@
 {
-    local_certs
 }
 
 sabnzbd.netbird.cloud {
+    tls /data/sabnzbd.crt /data/sabnzbd.key
     reverse_proxy localhost:8080 {
         header_up Host localhost
         header_up -X-Forwarded-For

@@ -1,7 +1,7 @@
 {
-    local_certs
 }
 
 overseerr.netbird.cloud {
+    tls /data/overseerr.crt /data/overseerr.key
     reverse_proxy localhost:5055
 }

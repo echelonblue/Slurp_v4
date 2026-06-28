@@ -1,8 +1,8 @@
 {
-    local_certs
     auto_https disable_redirects
 }
 
 spotweb.netbird.cloud {
+    tls /data/spotweb.crt /data/spotweb.key
     reverse_proxy localhost:80
 }

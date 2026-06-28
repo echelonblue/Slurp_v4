@@ -1,7 +1,7 @@
 {
-    local_certs
 }
 
 radarr.netbird.cloud {
+    tls /data/radarr.crt /data/radarr.key
     reverse_proxy localhost:7878
 }

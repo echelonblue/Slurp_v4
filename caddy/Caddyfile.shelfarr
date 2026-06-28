@@ -1,8 +1,8 @@
 {
-    local_certs
     auto_https disable_redirects
 }
 
 shelfarr.netbird.cloud {
+    tls /data/shelfarr.crt /data/shelfarr.key
     reverse_proxy localhost:80
 }

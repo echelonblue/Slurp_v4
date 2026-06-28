@@ -1,7 +1,7 @@
 {
-    local_certs
 }
 
 sonarr.netbird.cloud {
+    tls /data/sonarr.crt /data/sonarr.key
     reverse_proxy localhost:8989
 }
