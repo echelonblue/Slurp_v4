@@ -5,5 +5,8 @@
 sabnzbd.netbird.cloud {
     reverse_proxy localhost:8080 {
         header_up Host localhost
+        header_up -X-Forwarded-For
+        header_up -X-Real-IP
+        header_up -X-Forwarded-Host
     }
 }

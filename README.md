@@ -61,19 +61,20 @@ Doordat alle containers het netwerk-namespace van de Netbird-container delen, is
 ├── .env                              # Setup keys en wachtwoorden (niet committen!)
 ├── run_slurp.sh                      # Start alle containers
 ├── stop_slurp.sh                     # Stopt alle containers
-├── docker-compose.lidarr.yml
-├── docker-compose.radarr.yml
-├── docker-compose.sabnzbd.yml
-├── docker-compose.transmission.yml
-├── docker-compose.sonarr.yml
-├── docker-compose.overseerr.yml
-├── docker-compose.spotweb.yml
-├── docker-compose.jellyfin.yml
-├── docker-compose.bazarr.yml
-├── docker-compose.prowlarr.yml
-├── docker-compose.shelfarr.yml
-├── docker-compose.lingarr.yml
-├── docker-compose.watchtower.yml
+├── compose/
+│   ├── docker-compose.lidarr.yml
+│   ├── docker-compose.radarr.yml
+│   ├── docker-compose.sabnzbd.yml
+│   ├── docker-compose.transmission.yml
+│   ├── docker-compose.sonarr.yml
+│   ├── docker-compose.overseerr.yml
+│   ├── docker-compose.spotweb.yml
+│   ├── docker-compose.jellyfin.yml
+│   ├── docker-compose.bazarr.yml
+│   ├── docker-compose.prowlarr.yml
+│   ├── docker-compose.shelfarr.yml
+│   ├── docker-compose.lingarr.yml
+│   └── docker-compose.watchtower.yml
 ├── caddy/
 │   ├── Caddyfile.lidarr
 │   ├── Caddyfile.radarr
@@ -234,8 +235,8 @@ PersistentKeepalive = 25
 Bij een andere VPN-provider: vervang het `[Interface]`- en `[Peer]`-blok volledig door de config van de provider. De bestandsnaam moet `wg0.conf` blijven. Herstart na wijzigingen:
 
 ```bash
-docker compose -p transmission -f docker-compose.transmission.yml down
-docker compose -p transmission -f docker-compose.transmission.yml up -d
+docker compose -p transmission --project-directory . -f compose/docker-compose.transmission.yml down
+docker compose -p transmission --project-directory . -f compose/docker-compose.transmission.yml up -d
 ```
 
 Controleer of Transmission via de VPN verbindt:
@@ -273,9 +274,9 @@ Verbind Bazarr met Sonarr en Radarr via `Instellingen → Sonarr / Radarr`:
 ### Losse service beheren
 
 ```bash
-docker compose -p sonarr -f docker-compose.sonarr.yml up -d    # starten
-docker compose -p sonarr -f docker-compose.sonarr.yml down     # stoppen
-docker compose -p sonarr -f docker-compose.sonarr.yml logs -f  # logs bekijken
+docker compose -p sonarr --project-directory . -f compose/docker-compose.sonarr.yml up -d    # starten
+docker compose -p sonarr --project-directory . -f compose/docker-compose.sonarr.yml down     # stoppen
+docker compose -p sonarr --project-directory . -f compose/docker-compose.sonarr.yml logs -f  # logs bekijken
 ```
 
 ### Netbird-IP van een service opvragen
@@ -316,7 +317,7 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
 
 ## Jellyfin HW Transcoding
 
-Hardware-acceleratie is optioneel en uitgeschakeld door commentaar in `docker-compose.jellyfin.yml`. Verwijder het juiste blok om het te activeren.
+Hardware-acceleratie is optioneel en uitgeschakeld door commentaar in `compose/docker-compose.jellyfin.yml`. Verwijder het juiste blok om het te activeren.
 
 **Intel / AMD (VA-API):**
 
@@ -336,8 +337,8 @@ Vereist `nvidia-container-toolkit` op de host. Uncomment `runtime: nvidia` en de
 Na het activeren, herstart de stack:
 
 ```bash
-docker compose -p jellyfin -f docker-compose.jellyfin.yml down
-docker compose -p jellyfin -f docker-compose.jellyfin.yml up -d
+docker compose -p jellyfin --project-directory . -f compose/docker-compose.jellyfin.yml down
+docker compose -p jellyfin --project-directory . -f compose/docker-compose.jellyfin.yml up -d
 ```
 
 Activeer hardware-transcoding daarna in Jellyfin via `Dashboard → Afspelen → Transcodering`.
@@ -383,4 +384,4 @@ Dit geldt voor alle negen Caddyfiles in de `caddy/`-map.
 
 Watchtower controleert elke nacht om 04:00 of er nieuwe images beschikbaar zijn en herstart de containers automatisch. Oude images worden na de update opgeruimd.
 
-Het update-schema is aan te passen in `docker-compose.watchtower.yml` via `WATCHTOWER_SCHEDULE` (standaard cron-notatie met seconden: `s m h d M w`).
+Het update-schema is aan te passen in `compose/docker-compose.watchtower.yml` via `WATCHTOWER_SCHEDULE` (standaard cron-notatie met seconden: `s m h d M w`).
